@@ -8,10 +8,9 @@ from typing import Any, List
 import requests
 from dotenv import load_dotenv
 from fastmcp import FastMCP
-
-from backends import SourcegraphClient, SourcegraphContentFetcher
-from backends.models import FormattedResult
-from core import PromptManager
+from sourcegraph_mcp.backends import SourcegraphClient, SourcegraphContentFetcher
+from sourcegraph_mcp.backends.models import FormattedResult
+from sourcegraph_mcp.core import PromptManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
