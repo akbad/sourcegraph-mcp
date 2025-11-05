@@ -1,14 +1,17 @@
 [project]
 name = "sourcegraph-mcp"
-version = "0.1.0"
-description = "Model Context Protocol (MCP) server for Sourcegraph code search"
+version = "0.2.0"
+description = "Model Context Protocol (MCP) server for Sourcegraph code search (Python 3.12+ compatible fork)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
     { name = "Erfan Mirshams", email = "erfan.mirshams@gmail.com" }
 ]
-keywords = ["mcp", "sourcegraph", "code-search", "ai", "llm"]
+maintainers = [
+    { name = "Danny Akbarzadeh", email = "dakbarza@uwaterloo.ca" }
+]
+keywords = ["mcp", "sourcegraph", "code-search", "ai", "llm", "python312", "fastmcp"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
