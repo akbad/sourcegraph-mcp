@@ -11,6 +11,7 @@ from fastmcp import FastMCP
 from sourcegraph_mcp.backends import SourcegraphClient, SourcegraphContentFetcher
 from sourcegraph_mcp.backends.models import FormattedResult
 from sourcegraph_mcp.core import PromptManager
+from sourcegraph_mcp.exceptions import ContentFetchError, SearchError, ServerShutdownError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -76,17 +77,17 @@ def fetch_content(repo: str, path: str) -> str:
         return result
     except ValueError as e:
         logger.warning(f"Error fetching content from {repo}: {str(e)}")
-        return "invalid arguments the given path or repository does not exist"
+        raise ContentFetchError("Invalid arguments: path or repository does not exist") from e
     except Exception as e:
         logger.error(f"Unexpected error fetching content: {e}")
-        return "error fetching content"
+        raise ContentFetchError("Error fetching content") from e
 
 
 @server.tool(description=SEARCH_TOOL_DESCRIPTION)
 def search(query: str) -> List[FormattedResult]:
     if _shutdown_requested:
         logger.info("Shutdown in progress, declining new requests")
-        return []
+        raise ServerShutdownError("Server is shutting down")
 
     num_results = 30
 
@@ -96,17 +97,17 @@ def search(query: str) -> List[FormattedResult]:
         return formatted_results
     except requests.exceptions.HTTPError as exc:
         logger.error(f"Search HTTP error: {exc}")
-        return []
+        raise SearchError(f"HTTP error during search: {exc}") from exc
     except Exception as exc:
         logger.error(f"Unexpected error during search: {exc}")
-        return []
+        raise SearchError(f"Unexpected error during search: {exc}") from exc
 
 
 @server.tool(description=SEARCH_PROMPT_GUIDE_DESCRIPTION)
 def search_prompt_guide(objective: str) -> str:
     if _shutdown_requested:
         logger.info("Shutdown in progress, declining new prompt guide requests")
-        return "Server is shutting down"
+        raise ServerShutdownError("Server is shutting down")
 
     prompt_parts = []
 
