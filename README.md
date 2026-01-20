@@ -167,7 +167,7 @@ After running the MCP server, add the following to your `.cursor/mcp.json` file:
     "sourcegraph": {
       "url": "http://localhost:8080/sourcegraph/mcp/"
     }
-   }
+  }
 }
 ```
 
@@ -218,8 +218,6 @@ Verify the server is configured:
 ```bash
 gemini mcp list
 ```
-
-> **Note:** If you customized the port using `MCP_STREAMABLE_HTTP_PORT`, update the URLs above accordingly.
 
 ## MCP tools
 
