@@ -21,13 +21,15 @@ load_dotenv()
 
 class ServerConfig:
     def __init__(self) -> None:
+        # Sourcegraph instance endpoint must be set
+        self.sourcegraph_endpoint = self._get_required_env_var("SRC_ENDPOINT")
+
         self.sse_port = int(os.getenv("MCP_SSE_PORT", "8000"))
         self.streamable_http_port = int(os.getenv("MCP_STREAMABLE_HTTP_PORT", "8080"))
-        self.sourcegraph_endpoint = self._get_required_env("SRC_ENDPOINT")
         self.sourcegraph_token = os.getenv("SRC_ACCESS_TOKEN", "")  # Optional
 
     @staticmethod
-    def _get_required_env(key: str) -> str:
+    def _get_required_env_var(key: str) -> str:
         """Get required environment variable or raise descriptive error."""
         value = os.getenv(key)
         if not value:
@@ -39,28 +41,32 @@ config = ServerConfig()
 
 server = FastMCP()
 
+# Singleton instances created once at module load & reused for all requests
 search_client = SourcegraphClient(endpoint=config.sourcegraph_endpoint, token=config.sourcegraph_token)
 content_fetcher = SourcegraphContentFetcher(endpoint=config.sourcegraph_endpoint, token=config.sourcegraph_token)
 
+# Load tool descriptions from YAML source of truth
 prompt_manager = PromptManager(file_path=pathlib.Path(__file__).parent / "prompts" / "prompts.yaml")
-
-# Load prompts
 CODESEARCH_GUIDE = prompt_manager._load_prompt("guides.codesearch_guide")
 SEARCH_TOOL_DESCRIPTION = prompt_manager._load_prompt("tools.search")
 SEARCH_PROMPT_GUIDE_DESCRIPTION = prompt_manager._load_prompt("tools.search_prompt_guide")
 FETCH_CONTENT_DESCRIPTION = prompt_manager._load_prompt("tools.fetch_content")
 
-# Load organization-specific guide (may be empty/placeholder)
+# Load organization-specific guide if set
 try:
     ORG_GUIDE = prompt_manager._load_prompt("guides.org_guide")
 except Exception:
-    ORG_GUIDE = ""  # Fallback if not found
+    ORG_GUIDE = ""
+
 
 _shutdown_requested = False
 
-
 def signal_handler(sig: int, frame: Any) -> None:
-    """Handle termination signals for graceful shutdown."""
+    """
+    Handle termination signals (e.g. SIGTERM, SIGINT) for graceful shutdown.
+
+    Activates 'drain mode': active requests complete but new requests are rejected.
+    """
     global _shutdown_requested
     logger.info(f"Received signal {sig}, initiating graceful shutdown...")
     _shutdown_requested = True

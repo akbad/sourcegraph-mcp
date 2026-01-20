@@ -5,10 +5,11 @@ from .models import FormattedResult
 
 @runtime_checkable
 class SearchClientProtocol(Protocol):
-    """Protocol defining the interface for search clients.
+    """
+    Protocol defining the interface for search clients.
 
-    This is similar to Go interfaces - any class that implements
-    these methods will satisfy the protocol.
+    This functions similarly to Go interfaces: any class
+    implementing these methods satisfies the protocol.
     """
 
     def search(self, query: str, num: int) -> dict:
