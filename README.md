@@ -1,105 +1,131 @@
-# Sourcegraph MCP server
+# Sourcegraph MCP
+
+> MCP server exposing [Sourcegraph](https://sourcegraph.com)'s AI-enhanced code search capabilities to coding agents.
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastMCP 2.11.2+](https://img.shields.io/badge/FastMCP-2.11.2+-green.svg)](https://github.com/jlowin/fastmcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](Dockerfile)
 
-A Model Context Protocol (MCP) server that provides AI-enhanced code search capabilities using [Sourcegraph](https://sourcegraph.com).
+***Contents:***
 
-## Table of contents
-
-- [Table of contents](#table-of-contents)
-- [Overview](#overview)
-  - [About this fork](#about-this-fork)
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-  - [Using UV (recommended)](#using-uv-recommended)
-  - [Using pip](#using-pip)
-  - [Using Docker](#using-docker)
-- [Configuration](#configuration)
-  - [Required environment variables](#required-environment-variables)
-  - [Optional environment variables](#optional-environment-variables)
-- [Usage with AI tools](#usage-with-ai-tools)
+- [What this is](#what-this-is)
+  - [Features](#features)
+- [Quickstart](#quickstart)
+  - [Prerequisites](#prerequisites)
+  - [Configuration](#configuration)
+  - [Installing and running the server](#installing-and-running-the-server)
+- [Connecting your coding agents](#connecting-your-coding-agents)
   - [Cursor](#cursor)
   - [Claude Code](#claude-code)
   - [Codex CLI](#codex-cli)
   - [Gemini CLI](#gemini-cli)
 - [MCP tools](#mcp-tools)
-  - [🔍 search](#-search)
-  - [📖 search\_prompt\_guide](#-search_prompt_guide)
-  - [📂 fetch\_content](#-fetch_content)
-- [Migrating from upstream](#migrating-from-upstream)
-  - [Migration steps](#migration-steps)
+  - [`search`](#search)
+  - [`search_prompt_guide`](#search_prompt_guide)
+  - [`fetch_content`](#fetch_content)
 - [Development](#development)
   - [Linting and formatting](#linting-and-formatting)
 
-## Overview
+## What this is
 
-This MCP server integrates with Sourcegraph, a universal code search platform that enables searching across multiple repositories and codebases. It provides powerful search capabilities with advanced query syntax, making it ideal for AI assistants that need to find and understand code patterns across large codebases.
+This MCP server integrates with [Sourcegraph](https://sourcegraph.com/), a universal code search platform that enables searching across multiple repositories and codebases. It provides powerful search capabilities with advanced query syntax, making it ideal for AI assistants that need to find and understand code patterns across large codebases.
 
-### About this fork
+> This is an actively-maintained, detached fork of [divar-ir/sourcegraph-mcp](https://github.com/divar-ir/sourcegraph-mcp).
 
-This is an actively maintained fork of [divar-ir/sourcegraph-mcp](https://github.com/divar-ir/sourcegraph-mcp), created to patch upstream bugs and maintain an actively supported version of the Sourcegraph MCP server.
-
-> [!NOTE] 
-> ***Key additions vs. upstream:***
-> 
-> - **Python 3.12+ support** (compatible with 3.10+)
-> - Functional package structure
-> - **Tunable config via env vars**, rather than hardcoded paths
-> - **FastMCP dependency upgraded to ≥2.11.2** (to integrate patches)
-> 
->     - Updated to **decorator-based tool registration** (to conform to new version & for convenience)
-
-## Features
+### Features
 
 - **Code search**: Search across codebases using Sourcegraph's powerful query language
 - **Advanced query language**: Support for regex patterns, file filters, language filters, and boolean operators
 - **Repository discovery**: Find repositories by name and explore their structure
 - **Content fetching**: Browse repository files and directories
 - **AI integration**: Designed for LLM integration with guided search prompts
-- **Python 3.12+ compatible**: Fully tested and working on Python 3.10, 3.11, and 3.12+
+- **Python 3.10+ compatible**: Fully tested and working on Python 3.10, 3.11, and 3.12+
 
-## Prerequisites
+## Quickstart
 
-- **Sourcegraph Instance**: Access to a Sourcegraph instance (either sourcegraph.com or self-hosted)
-- **Python 3.10+**: Required for running the MCP server (Python 3.12+ fully supported)
-- **uv** (optional): Modern Python package manager for easier dependency management
+### Prerequisites
 
-## Installation
+- A **Sourcegraph instance**: access to a Sourcegraph instance (i.e., either the sourcegraph.com cloud-hosted remote or a private self-hosted instance)
 
-### Using UV (recommended)
+  > Note the Sourcegraph cloud-hosted remote offers a **free tier**: this is probably the quickest option for first-time/unfamiliar users.
 
-```bash
-# Clone the repository
-git clone https://github.com/akbad/sourcegraph-mcp.git
-cd sourcegraph-mcp
+- **Python 3.10+**
+- **`uv`** (optional but recommended): offers easier dependency & interpreter management
 
-# Install dependencies
-uv sync
+### Configuration
 
-# Run the server
-uv run python -m src.main
-```
+Server configuration is done **via environment variables**. You can either: 
 
-### Using pip
+- Add these to a `.env` file in this repo (using [`.env.sample`](.env.sample) as a template)
+- Prepend them to the server launch command
 
-```bash
-# Install directly from GitHub
-pip install git+https://github.com/akbad/sourcegraph-mcp.git
+#### <ins>Required</ins> values
 
-# Or clone and install locally
-git clone https://github.com/akbad/sourcegraph-mcp.git
-cd sourcegraph-mcp
-pip install -e .
+> [!IMPORTANT]
+>
+> You must set the following config values:
+> 
+> - `SRC_ENDPOINT`: URL pointing to the desired Sourcegraph instance (e.g., https://sourcegraph.com)
 
-# Run the server
-python -m src.main
-```
+#### Optional values
 
-### Using Docker
+| Variable | Usage |
+| :--- | :--- |
+| `SRC_ACCESS_TOKEN` | Auth token (for private Sourcegraph instances) |
+| `MCP_SSE_PORT` | SSE server port (default: `8000`) |
+| `MCP_STREAMABLE_HTTP_PORT` | HTTP server port (default: `8080`) |
+| `FASTMCP_SSE_PATH` | SSE endpoint path (default: /sourcegraph/sse) |
+| `FASTMCP_MESSAGE_PATH` | SSE messages endpoint path (default: /sourcegraph/messages/) |
+
+### Installing and running the server
+
+#### Method 1: From source using `uv` <ins>(recommended)</ins>
+
+1. Clone the repo:
+
+    ```bash
+    git clone https://github.com/akbad/sourcegraph-mcp.git
+    cd sourcegraph-mcp
+    ```
+
+2. Install dependencies
+
+    ```bash
+    uv sync
+    ```
+
+3. Run the server
+
+    ```bash
+    uv run python -m src.main
+    ```
+
+#### Method 2: From source using `pip`/`python`
+
+1. Do either of the following:
+
+    - Install via `pip` directly from GitHub
+
+        ```bash
+        pip install git+https://github.com/akbad/sourcegraph-mcp.git
+        ```
+      
+    - Clone the repo source
+        
+        ```bash
+        git clone https://github.com/akbad/sourcegraph-mcp.git
+        ```
+
+2. Install and run the server:
+
+    ```bash
+    cd sourcegraph-mcp
+    pip install -e .
+    python -m src.main
+    ```
+
+#### Method 3: Using a Docker container
 
 ```bash
 # Pull from GitHub Container Registry
@@ -110,13 +136,13 @@ git clone https://github.com/akbad/sourcegraph-mcp.git
 cd sourcegraph-mcp
 docker build -t sourcegraph-mcp .
 
-# Run the container with default ports
+# Run the container with default ports...
 docker run -p 8000:8000 -p 8080:8080 \
   -e SRC_ENDPOINT=https://sourcegraph.com \
   -e SRC_ACCESS_TOKEN=your-token \
   ghcr.io/akbad/sourcegraph-mcp:latest
 
-# Or run with custom ports
+# ... or custom ports
 docker run -p 9000:9000 -p 9080:9080 \
   -e SRC_ENDPOINT=https://sourcegraph.com \
   -e SRC_ACCESS_TOKEN=your-token \
@@ -125,21 +151,11 @@ docker run -p 9000:9000 -p 9080:9080 \
   ghcr.io/akbad/sourcegraph-mcp:latest
 ```
 
-## Configuration
+## Connecting your coding agents
 
-### Required environment variables
-
-- `SRC_ENDPOINT`: Sourcegraph instance URL (e.g., https://sourcegraph.com)
-
-### Optional environment variables
-
-- `SRC_ACCESS_TOKEN`: Authentication token for private Sourcegraph instances
-- `MCP_SSE_PORT`: SSE server port (default: `8000`)
-- `MCP_STREAMABLE_HTTP_PORT`: HTTP server port (default: `8080`)
-- `FASTMCP_SSE_PATH`: SSE endpoint path (default: /sourcegraph/sse)
-- `FASTMCP_MESSAGE_PATH`: SSE messages endpoint path (default: /sourcegraph/messages/)
-
-## Usage with AI tools
+> [!NOTE]
+> 
+> If you customized the port using `MCP_STREAMABLE_HTTP_PORT`, update the URLs below accordingly.
 
 ### Cursor
 
