@@ -1,3 +1,5 @@
+"""Sourcegraph search client implementation using the streaming API."""
+
 import json
 import logging
 from typing import Any, Dict, Iterator, List
@@ -6,7 +8,7 @@ from urllib.parse import urlencode
 import requests
 
 from .models import FormattedResult, Match
-from .search_protocol import SearchClientProtocol
+from .protocols import SearchClientProtocol
 
 logger = logging.getLogger(__name__)
 
