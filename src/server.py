@@ -129,6 +129,34 @@ def search_prompt_guide(objective: str) -> str:
     return "".join(prompt_parts)
 
 
+@server.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> Response:
+    """Endpoint for K8s health checks/liveness probes."""
+    return JSONResponse({"status": "ok", "service": "sourcegraph-mcp"})
+
+
+@server.custom_route("/ready", methods=["GET"])
+async def readiness_check(request: Request) -> Response:
+    """Endpoint for K8s readiness checks."""
+    try:
+        if _shutdown_requested:
+            # if shutting down, only existing requests are being served:
+            #   don't signal readiness for more
+            return JSONResponse({"status": "not_ready", "reason": "shutdown_in_progress"}, status_code=503)
+
+        # ensure main clients needed for server to function are present
+        if search_client is None:
+            return JSONResponse({"status": "not_ready", "reason": "search_client_unavailable"}, status_code=503)
+        if content_fetcher is None:
+            return JSONResponse({"status": "not_ready", "reason": "content_fetcher_unavailable"}, status_code=503)
+
+        return JSONResponse({"status": "ready", "service": "sourcegraph-mcp", "backend": "sourcegraph"})
+
+    except Exception as e:
+        logger.error(f"Readiness check failed: {e}")
+        return JSONResponse({"status": "error", "reason": str(e)}, status_code=503)
+
+
 async def _run_server() -> None:
     """Run the FastMCP server with both HTTP and SSE transports."""
     tasks = [
