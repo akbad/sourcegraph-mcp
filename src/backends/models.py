@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import List
 
 
-# Note the @dataclass decorator auto-generates necessary but trivial utility functions for 
+# Note the @dataclass decorator auto-generates necessary but trivial utility functions for
 #   simple data container classes like these.
 
 @dataclass
