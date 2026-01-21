@@ -8,6 +8,8 @@ from typing import List
 
 # Note the @dataclass decorator auto-generates necessary but trivial utility functions for
 #   simple data container classes like these.
+# FastMCP also auto-serializes dataclasses, so results (such as a list of FormattedResult
+#   objects) become proper JSON for the calling agent to consume.
 
 @dataclass
 class Match:
