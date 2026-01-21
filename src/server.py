@@ -12,6 +12,8 @@ from sourcegraph_mcp.backends import SourcegraphClient, SourcegraphContentFetche
 from sourcegraph_mcp.backends.models import FormattedResult
 from sourcegraph_mcp.core import PromptManager
 from sourcegraph_mcp.exceptions import ContentFetchError, SearchError, ServerShutdownError
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
