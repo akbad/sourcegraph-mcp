@@ -20,7 +20,11 @@ tools:
     - Symbol search: `type:symbol` for functions/classes
     - Repository search: `r:repo_name type:repo` for finding repos
 
-    **Examples:**
+    Parameters:
+    - query (required): The search query string
+    - limit (optional): Maximum number of results to return (default: 20, min: 1, max: 100)
+
+    Examples:
     1. Find Go function definitions: `"func SendMessage" lang:go`
     2. Find Python class definitions: `"class UserService" lang:python`
     3. Find Go struct definitions: `"type UserService struct" lang:go`

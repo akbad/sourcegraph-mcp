@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 
 import requests
 
-from .content_fetcher_protocol import MAX_FILE_SIZE, ContentFetcherProtocol
+from .protocols import MAX_FILE_SIZE, ContentFetcherProtocol
 
 
 class SourcegraphContentFetcher(ContentFetcherProtocol):

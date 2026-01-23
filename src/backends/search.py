@@ -1,3 +1,5 @@
+"""Sourcegraph search client implementation using the streaming API."""
+
 import json
 import logging
 from typing import Any, Dict, Iterator, List
@@ -6,7 +8,7 @@ from urllib.parse import urlencode
 import requests
 
 from .models import FormattedResult, Match
-from .search_protocol import SearchClientProtocol
+from .protocols import SearchClientProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -105,12 +107,12 @@ class SourcegraphClient(SearchClientProtocol):
             Raw search results as a dictionary
         """
         params = {
-            "q": query,
-            "t": "keyword",
-            "v": "V3",
-            "cm": "true",  # chunk matches
-            "cl": "5",
-            "display": str(num),  # Limit results on the server side
+            "q": query,                  # query string
+            "t": "keyword",              # search type (set to keyword-based matching)
+            "v": "V3",                   # Sourcegraph API version
+            "cm": "true",                # whether to chunk matches (i.e. return contiguous chunks of code vs. individual lines)
+            "cl": "5",                   # lines of surrounding content to include for each matched chunk
+            "display": str(num),  # desired result count (limited on server side)
         }
 
         url = f"{self.endpoint}/.api/search/stream?{urlencode(params)}"

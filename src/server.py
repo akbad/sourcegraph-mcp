@@ -13,6 +13,11 @@ from sourcegraph_mcp.backends.models import FormattedResult
 from sourcegraph_mcp.core import PromptManager
 from sourcegraph_mcp.exceptions import ContentFetchError, SearchError, ServerShutdownError
 
+# JSON types used by health/readiness check endpoints that communicate with non-MCP clients
+#   directly via HTTP
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -73,13 +78,14 @@ def signal_handler(sig: int, frame: Any) -> None:
 
 
 @server.tool(description=FETCH_CONTENT_DESCRIPTION)
-def fetch_content(repo: str, path: str) -> str:
+async def fetch_content(repo: str, path: str) -> str:
     if _shutdown_requested:
         logger.info("Shutdown in progress, declining new requests")
-        return ""
+        raise ServerShutdownError("Server is shutting down")
 
     try:
-        result = content_fetcher.get_content(repo, path)
+        # Offload main networked call to thread pool
+        result = await asyncio.to_thread(content_fetcher.get_content, repo, path)
         return result
     except ValueError as e:
         logger.warning(f"Error fetching content from {repo}: {str(e)}")
@@ -90,17 +96,22 @@ def fetch_content(repo: str, path: str) -> str:
 
 
 @server.tool(description=SEARCH_TOOL_DESCRIPTION)
-def search(query: str) -> List[FormattedResult]:
+async def search(query: str, limit: int = 20) -> List[FormattedResult]:
     if _shutdown_requested:
         logger.info("Shutdown in progress, declining new requests")
         raise ServerShutdownError("Server is shutting down")
 
-    num_results = 30
+    # Enforce limit on result size to be in [1, 100]
+    num_results = min(max(1, limit), 100)
+    logger.info(f"Search query: {query}, limit: {num_results}")
 
     try:
-        results = search_client.search(query, num_results)
-        formatted_results = search_client.format_results(results, num_results)
+        # Offload main networked call to thread pool
+        results = await asyncio.to_thread(search_client.search, query, num_results)
+        formatted_results = await asyncio.to_thread(search_client.format_results, results, num_results)
         return formatted_results
+
+    # Chain any raised exceptions to preserve the full traceback for display
     except requests.exceptions.HTTPError as exc:
         logger.error(f"Search HTTP error: {exc}")
         raise SearchError(f"HTTP error during search: {exc}") from exc
@@ -127,6 +138,34 @@ def search_prompt_guide(objective: str) -> str:
     )
 
     return "".join(prompt_parts)
+
+
+@server.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> Response:
+    """Endpoint for K8s health checks/liveness probes."""
+    return JSONResponse({"status": "ok", "service": "sourcegraph-mcp"})
+
+
+@server.custom_route("/ready", methods=["GET"])
+async def readiness_check(request: Request) -> Response:
+    """Endpoint for K8s readiness checks."""
+    try:
+        if _shutdown_requested:
+            # if shutting down, only existing requests are being served:
+            #   don't signal readiness for more
+            return JSONResponse({"status": "not_ready", "reason": "shutdown_in_progress"}, status_code=503)
+
+        # ensure main clients needed for server to function are present
+        if search_client is None:
+            return JSONResponse({"status": "not_ready", "reason": "search_client_unavailable"}, status_code=503)
+        if content_fetcher is None:
+            return JSONResponse({"status": "not_ready", "reason": "content_fetcher_unavailable"}, status_code=503)
+
+        return JSONResponse({"status": "ready", "service": "sourcegraph-mcp", "backend": "sourcegraph"})
+
+    except Exception as e:
+        logger.error(f"Readiness check failed: {e}")
+        return JSONResponse({"status": "error", "reason": str(e)}, status_code=503)
 
 
 async def _run_server() -> None:
