@@ -221,80 +221,31 @@ gemini mcp list
 
 ## MCP tools
 
-This server provides three powerful tools for AI assistants:
+This server exposes 3 tools to coding agents:
 
-### 🔍 search
+### `search`
 
 Search across codebases using Sourcegraph's advanced query syntax with support for regex, language filters, and boolean operators.
 
-**Example queries**:
-- `repo:github.com/kubernetes/kubernetes error handler`
-- `lang:python class UserService`
-- `file:\.go$ func SendMessage`
+**Parameters**:
+- `query`: The search query string (required)
+- `limit`: Maximum number of results to return (optional, default: 30, range: 1-100)
 
-### 📖 search_prompt_guide
+### `search_prompt_guide`
 
-Generate a context-aware guide for constructing effective search queries based on your specific objective. This tool helps AI assistants learn how to use Sourcegraph's query syntax effectively.
+- Generate a context-aware guide for constructing effective search queries based on your specific objective.
+- This tool helps AI assistants learn how to use Sourcegraph's query syntax effectively.
 
 **Parameters**:
 - `objective`: What you're trying to find or accomplish
 
-### 📂 fetch_content
+### `fetch_content`
 
 Retrieve file contents or explore directory structures from repositories.
 
 **Parameters**:
-- `repo`: Repository path (e.g., "github.com/org/project")
-- `path`: File or directory path within the repository
-
-## Migrating from upstream
-
-How to switch to this maintained fork if you're currently using [the upstream]([text](https://github.com/divar-ir/sourcegraph-mcp)):
-
-> [!IMPORTANT]
-> **Breaking changes:**
->
-> 1. **FastMCP version**: Minimum version is now 2.11.2+ (was 2.4.0)
-> 2. **Environment variables**: Add these to your `.env` file:
->    ```bash
->    FASTMCP_SSE_PATH=/sourcegraph/sse
->    FASTMCP_MESSAGE_PATH=/sourcegraph/messages/
->    ```
-> 3. **Python version**: Ensure you're using Python 3.10+ (3.12+ fully supported)
-
-### Migration steps
-
-1. Update git remote
-
-    ```bash
-    cd /path/to/your/sourcegraph-mcp
-    git remote set-url origin https://github.com/akbad/sourcegraph-mcp.git
-    ```
-
-2. Pull the latest changes
-
-    ```bash
-    git pull origin master
-    ```
-
-3. Update dependencies
-    
-    ```bash
-    uv sync  # or: pip install --upgrade -e .
-    ```
-
-4. Add new environment variables to `.env`
-
-    ```bash
-    echo "FASTMCP_SSE_PATH=/sourcegraph/sse" >> src/.env
-    echo "FASTMCP_MESSAGE_PATH=/sourcegraph/messages/" >> src/.env
-    ```
-
-5. Restart Sourcegraph MCP server
-    
-    ```bash
-    uv run python -m src.main
-    ```
+- `repo`: Repo path (e.g., "github.com/org/project")
+- `path`: File or directory path within the repo
 
 ## Development
 
